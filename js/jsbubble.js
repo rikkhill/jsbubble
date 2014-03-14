@@ -60,6 +60,18 @@ function euc(v1, v2) { // Euclidean distance between two points
     return Math.round( Math.pow( Math.pow(v1[0] - v2[0], 2) + Math.pow(v1[1] - v2[1], 2), 0.5) );
 }
 
+function vNorm(v1) { // Get a unit vector from a vector
+    var len = Math.sqrt( Math.pow(v1[0], 2) + Math.pow(v1[1],2));
+    if(len === 0) {
+        return [0,0];
+    }
+    return [ v1[0] / len, v1[1] / len  ];
+}
+
+function vScale(n, v1) { // Scale a vector by n
+    return [ Math.round( n * v1[0] ) , Math.round( n * v1[1] )  ];
+}
+
 function vSum(v1, v2) { // the sum of two vectors
     return [v1[0] + v2[0], v1[1] + v2[1]];
 }
@@ -67,6 +79,18 @@ function vSum(v1, v2) { // the sum of two vectors
 function vDiff(v1, v2) { // the difference of two vectors
     return [v1[0] - v2[0], v1[1] - v2[1]];
 }
+
+function vDot(v1, v2) {  // dot product
+    var summer = 0;
+    for (i in v1) {
+        summer += v1[i] * v2[i];
+    }
+    return summer;
+}
+
+
+
+
 
 // Colour functions
 
@@ -125,13 +149,13 @@ function ForceEngine() {  // Applies forces to particles and manages collisions
   
     var self = this;
     
-    this.particles = [];
+    this.parts = [];
     this.forces = [];
     this.obstacles = [];
     
     this.timer; 
     
-    this.tick_size = 42;  // Number of ms in a "tick"
+    this.tick_size = 41;  // Number of ms in a "tick"
     
     this.absolute_time = 0;  // absolute time
     
@@ -139,7 +163,7 @@ function ForceEngine() {  // Applies forces to particles and manages collisions
     this.addParticle = function(particle) {  // Add a particle
    
         particle.appear();
-        this.particles.push(particle);
+        this.parts.push(particle);
     }
     
     this.addForce = function(force) {  // Add a particle
@@ -153,37 +177,55 @@ function ForceEngine() {  // Applies forces to particles and manages collisions
     }
     
     this.tick = function() {  // apply forces to particles and check for collision
-        var x, y, r, t, i, j;
-        for (i in self.particles) {
-            x = self.particles[i].x;
-            y = self.particles[i].y;
-            r = self.particles[i].radius;
+        var x, y, r, t, i, j, point;
+        for (i in self.parts) {
+            x = self.parts[i].x;
+            y = self.parts[i].y;
+            r = self.parts[i].radius;
             t = self.absolute_time;
         
-            if (self.particles[i].ghost!== false) {
+            if (self.parts[i].ghost!== false) {
                 continue;
             }
 
-            self.particles[i].x += self.particles[i].v_i;
-            self.particles[i].y -= self.particles[i].v_j;
-            self.particles[i].render();
+
             
             // Forces
             
             for (j in self.forces) {
 
-                self.particles[i].exert(self.forces[j](x, y, t));
+                self.parts[i].exert(self.forces[j](x, y, t));
             }
             
             // Collisions
             
             for (j in self.obstacles) {
-                if (self.obstacles[j].distance(x, y) < r) {  // Collision with obstacle!
+                if (self.obstacles[j].distance([x, y]) <= r) {  // Collision with obstacle!
+                
+                    // reposition the particle at a point along its trajectory
+                    // where it's not colliding
                     
+                    self.parts[i].pos( vDiff ( [x, y], self.parts[i].vel()));
+                
+                    var fakeObj = self.obstacles[j].collisionObject(self.parts[i]);
+                    console.log(self.parts[i]);
+                    self.parts[i].reflect(fakeObj);
                 }
             }
+
+
             
         }
+        for (i in self.parts) {   // move particles only after everything is calculated
+        
+            if (self.parts[i].ghost!== false) {
+	        continue;
+            }
+	    self.parts[i].x += self.parts[i].v_i;
+	    self.parts[i].y -= self.parts[i].v_j;
+            self.parts[i].render();
+        }
+        
 
         self.absolute_time += self.tick_size;
     }
@@ -202,16 +244,48 @@ function ForceEngine() {  // Applies forces to particles and manages collisions
 
 }
 
+function cloj(vals) {  // a simple closure that returns a set value
+    func = function() {
+        return vals;
+    }
+    return func;
+}
+
 function Wall(id, a, b, c) {  // We define a line in the plane to test collisions off
+    
+    var self = this;
     
     this.id = id;
     this.a = a;
     this.b = b;
     this.c = c;
     
-    this.distance = function(x0, y0) { // Distance from this line
-       return Math.abs((this.a*x0)+(this.b*y0)+c)/Math.sqrt(Math.pow(this.a,2)+Math.pow(this.b,2));
+    this.radius = 0;
+    
+    
+    this.distance = function(vector) { // Distance from this line
+        var x0 = vector[0];
+        var y0 = vector[1];
+        return Math.abs((this.a*x0)+(this.b*y0)+c)/Math.sqrt(Math.pow(this.a,2)+Math.pow(this.b,2));
     }
+    
+    this.nearpoint = function(vector) { // Nearest point
+        var x0 = vector[0];
+        var y0 = vector[1];
+        var vec = [0,0];
+        vec[0] = (this.b * (this.b * x0 - this.a * y0) - this.a*this.c) / (this.a*this.a + this.b*this.b);
+        vec[1] = (this.a * (this.a * y0 - this.b * x0) - this.b*this.c) / (this.a*this.a + this.b*this.b);
+        return vec;
+    }
+    
+    this.collisionObject = function(obj) { // Manufacture a fake collision object for a particle to hit
+        return {
+           pos : cloj(this.nearpoint([obj.x, obj.y])),  // return fake point
+           mass : obj.mass,
+           vel: cloj([0,0])  // Not moving
+        };
+    }
+
 }
 
 function Bubble() {  // A large round colourful particle
@@ -280,14 +354,50 @@ function Bubble() {  // A large round colourful particle
         this.v_j += Math.ceil(vector[1] / this.mass);
     }
     
-    this.reflect = function(vector) { // reflect off given position vector
-        var diff = vDiff (vector, self.pos());
+    this.reflect = function(obj) {  // Reflect off a surface
+        console.log("reflecting object " + this.id + " with velocity: " + this.vel());
+        var nv = vDiff (self.pos(), obj.pos());
         
-        this.v_i = this.v_i * (diff[0] / Math.abs(diff[0]) );
-        this.v_j = this.v_j * (diff[1] / Math.abs(diff[1]) );
-
+        console.log("diff", nv);
+        
+        nv = vNorm(nv); // normal vector
+        
+        console.log("nv",nv);
+        
+        var dot_prod = vDot(this.vel(), nv);
+        
+        console.log("dot prod", dot_prod);
+        var my_reflection = vDiff( this.vel() , vScale( (dot_prod * 2), nv  ) );
+        
+        
+        this.vel(my_reflection); 
+        
+        console.log("new velocity: ", this.vel());    
+    
     }
     
+    this.collide = function(obj) {  // collide off another particle
+        console.log("Colliding object " + this.id + " with velocity: " + this.vel());
+        var diff = vDiff (self.pos(), obj.pos());
+        diff = vNorm(diff); // normal unit vector
+        
+        var my_projection = vDot(self.vel(), diff) // dot product of velocity vector along the unit vector
+        
+        
+        var their_projection = vDot(obj.vel(), diff)  // For the other dude
+        
+        var c_o_i = ( 2 * (my_projection - their_projection) ) / (this.mass + obj.mass);// conserved inertia
+
+        var scaled_diff = vScale( (c_o_i * obj.mass) , diff);
+        console.log("Scaled Diff", scaled_diff);
+        
+        
+        this.vel( vDiff( this.vel(), scaled_diff ) ); 
+        
+        console.log("new velocity: ", this.vel());
+    }
+
+
     this.substantiate = function() {
         this.ghost = false;
     }
@@ -334,7 +444,7 @@ $(document).ready( function() {
 
     world = new ForceEngine();
     
-    for (var i = 0; i < 10; i++) {
+    for (var i = 0; i < 3; i++) {
         world.addParticle(new Bubble());
     }
     
@@ -344,12 +454,22 @@ $(document).ready( function() {
         return [1, 0];
     }
     
-    wall1 = new Wall("left wall", 100, 0, -100); // Wall at x = 100
+    wall1 = new Wall("left wall", 1, 0, -1); // Wall at x = 100
+    
+    container_height = $(CONTAINER).height();
+    container_width = $(CONTAINER).width();
+    
+    wall2 = new Wall("right wall", container_width, 0, (-1 * container_width) );
+    wall3 = new Wall("top wall", 0, container_height, (-1 * container_height) );
+    wall4 = new Wall("bottom wall", 0, 1, -1);
     
     //wall1 = new Wall("right wall", $(CONTAINER).width() - 100, 0, $(CONTAINER).width() - 100); // Wall at x = 100
         
     //world.addForce(force1);
     world.addObstacle(wall1);
+    world.addObstacle(wall2);
+    world.addObstacle(wall3);
+    world.addObstacle(wall4);
     
     world.start();
 
