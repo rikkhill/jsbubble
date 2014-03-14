@@ -20,7 +20,24 @@ function problogger() {   // Log this probabilistically
     }
 }
 
+// Display functions
 
+function screenMapping(obj) { // Return a screen mapping function for the container object
+
+    var x_offset, y_offset, width, height;
+    x_offset = $(obj).offset().left;
+    y_offset = $(obj).offset().top;
+    width = $(obj).width();
+    height = $(obj).height();
+
+    var func = function(x, y) {  // Take xy coordinates and plant them on 
+        var x_map = x + x_offset;
+        var y_map = (height - y) + y_offset;
+        return [x_map, y_map];
+    }
+
+    return func;
+}
 
 // Random number functions
 
@@ -161,12 +178,8 @@ function ForceEngine() {  // Applies forces to particles and manages collisions
             // Collisions
             
             for (j in self.obstacles) {
-            
-                logger(r, x, y, self.obstacles[j].distance(x, y));
-                
-            
-                if (self.obstacles[j].distance(x, y) < r) {
-                    logger(self.particles[i].id + " hit " + self.obstacles[j].id);
+                if (self.obstacles[j].distance(x, y) < r) {  // Collision with obstacle!
+                    
                 }
             }
             
@@ -226,10 +239,13 @@ function Bubble() {  // A large round colourful particle
     this.trans = 0.5; // How opaque is this particle?
     
     this.colour = blendCol(randCol(), '#AAAA22');
+    
+
+    var xy = sm(this.x, this.y);
 
     this.obj = $('<div>').addClass("bubble").attr("id", toString(this.id)).css({
-        'left'		: this.x - (this.radius) ,
-        'top'		: $(CONTAINER).height() - (this.y + (this.radius)),
+        'left'		: xy[0] - this.radius,
+        'top'		: xy[1] - this.radius,
         'height'	: this.radius * 2,
 	'width'		: this.radius * 2,
         'position'	: 'absolute',
@@ -248,9 +264,12 @@ function Bubble() {  // A large round colourful particle
     }
     
     this.render = function() {  // apply css based on properties
+    
+        var xy = sm(this.x, this.y);
+    
         $(this.obj).css({
-        'left'		: this.x - (this.radius),
-        'top'		: $(CONTAINER).height() - (this.y + (this.radius)),
+        'left'		: xy[0] - this.radius,
+        'top'		: xy[1] - this.radius,
         'opacity'	: this.trans,
         'background-color': this.colour
         });
@@ -302,14 +321,20 @@ function Bubble() {  // A large round colourful particle
 
 DEBUG = true;
 
-CONTAINER = window;
+CONTAINER = {};
+
+sm = {};
 
 $(document).ready( function() {
+
+    CONTAINER = $('#bubblebox').get();
+    sm = screenMapping(CONTAINER);
+    console.log(CONTAINER);
 
 
     world = new ForceEngine();
     
-    for (var i = 0; i < 1; i++) {
+    for (var i = 0; i < 10; i++) {
         world.addParticle(new Bubble());
     }
     
