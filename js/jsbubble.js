@@ -149,6 +149,8 @@ function ForceEngine() {  // Applies forces to particles and manages collisions
   
     var self = this;
     
+    this.running = false;
+    
     this.parts = [];
     this.forces = [];
     this.obstacles = [];
@@ -193,6 +195,9 @@ function ForceEngine() {  // Applies forces to particles and manages collisions
             // Forces
             
             for (j in self.forces) {
+            
+            console.log(self.forces[j](x, y, t));
+
 
                 self.parts[i].exert(self.forces[j](x, y, t));
             }
@@ -205,11 +210,10 @@ function ForceEngine() {  // Applies forces to particles and manages collisions
                     // reposition the particle at a point along its trajectory
                     // where it's not colliding
                     
-                    self.parts[i].pos( vDiff ( [x, y], self.parts[i].vel()));
-                
-                    var fakeObj = self.obstacles[j].collisionObject(self.parts[i]);
-                    console.log(self.parts[i]);
-                    self.parts[i].reflect(fakeObj);
+                    var vel = self.parts[i].vel() // This is its velocity
+                    
+                  
+                    self.parts[i].reflect(self.obstacles[i].nearpoint([x,y]));
                 }
             }
 
@@ -221,8 +225,8 @@ function ForceEngine() {  // Applies forces to particles and manages collisions
             if (self.parts[i].ghost!== false) {
 	        continue;
             }
-	    self.parts[i].x += self.parts[i].v_i;
-	    self.parts[i].y -= self.parts[i].v_j;
+            self.parts[i].pos( vSum( self.parts[i].pos(), self.parts[i].vel() ) );
+            console.log(self.parts[i].id, self.parts[i].vel(), self.parts[i].pos());
             self.parts[i].render();
         }
         
@@ -233,22 +237,17 @@ function ForceEngine() {  // Applies forces to particles and manages collisions
     this.start = function() {
         this.timer = setInterval(this.tick, this.tick_size);// interval);
         logger("timer started");
+        this.running = true;
         return true;
     }
     
     this.stop = function() {
         clearInterval(this.timer);
         logger("timer stopped");  
+        this.running = false;
         return true;
     }
 
-}
-
-function cloj(vals) {  // a simple closure that returns a set value
-    func = function() {
-        return vals;
-    }
-    return func;
 }
 
 function Wall(id, a, b, c) {  // We define a line in the plane to test collisions off
@@ -278,14 +277,6 @@ function Wall(id, a, b, c) {  // We define a line in the plane to test collision
         return vec;
     }
     
-    this.collisionObject = function(obj) { // Manufacture a fake collision object for a particle to hit
-        return {
-           pos : cloj(this.nearpoint([obj.x, obj.y])),  // return fake point
-           mass : obj.mass,
-           vel: cloj([0,0])  // Not moving
-        };
-    }
-
 }
 
 function Bubble() {  // A large round colourful particle
@@ -295,7 +286,7 @@ function Bubble() {  // A large round colourful particle
     var rloc = randomContainerLocation(CONTAINER);
 
     this.radius = randInt(10,35);
-    this.mass = this.radius * this.radius; // Math.pow(this.radius, 0.5); // approximate "mass" relative to size   
+    this.mass = Math.pow(this.radius, 0.5); // approximate "mass" relative to size   
     this.ghost = true;
         
     this.id = randInt(10000, 99999);
@@ -304,8 +295,8 @@ function Bubble() {  // A large round colourful particle
     this.y = rloc[1];
     
     
-    this.v_i = -2;
-    this.v_j = 0;
+    this.v_i = -1;
+    this.v_j = -1;
 
     
 
@@ -350,34 +341,28 @@ function Bubble() {  // A large round colourful particle
     }
     
     this.exert = function(vector){  // Exert a force vector on this particle
-        this.v_i += Math.ceil(vector[0] / this.mass);
-        this.v_j += Math.ceil(vector[1] / this.mass);
+
+        this.v_i += vector[0] / this.mass;
+        this.v_j += vector[1] / this.mass;
     }
     
-    this.reflect = function(obj) {  // Reflect off a surface
-        console.log("reflecting object " + this.id + " with velocity: " + this.vel());
-        var nv = vDiff (self.pos(), obj.pos());
-        
-        console.log("diff", nv);
+    this.reflect = function(point) {  // Reflect off a surface
+        var nv = vDiff (self.pos(), point);
         
         nv = vNorm(nv); // normal vector
         
-        console.log("nv",nv);
-        
+       
         var dot_prod = vDot(this.vel(), nv);
-        
-        console.log("dot prod", dot_prod);
+
         var my_reflection = vDiff( this.vel() , vScale( (dot_prod * 2), nv  ) );
         
         
         this.vel(my_reflection); 
-        
-        console.log("new velocity: ", this.vel());    
+
     
     }
     
     this.collide = function(obj) {  // collide off another particle
-        console.log("Colliding object " + this.id + " with velocity: " + this.vel());
         var diff = vDiff (self.pos(), obj.pos());
         diff = vNorm(diff); // normal unit vector
         
@@ -389,12 +374,9 @@ function Bubble() {  // A large round colourful particle
         var c_o_i = ( 2 * (my_projection - their_projection) ) / (this.mass + obj.mass);// conserved inertia
 
         var scaled_diff = vScale( (c_o_i * obj.mass) , diff);
-        console.log("Scaled Diff", scaled_diff);
         
         
         this.vel( vDiff( this.vel(), scaled_diff ) ); 
-        
-        console.log("new velocity: ", this.vel());
     }
 
 
@@ -438,11 +420,24 @@ sm = {};
 $(document).ready( function() {
 
     CONTAINER = $('#bubblebox').get();
+
     sm = screenMapping(CONTAINER);
     console.log(CONTAINER);
 
 
     world = new ForceEngine();
+    
+    $(CONTAINER).on('click', function() {
+    
+        if(world.running) {
+            world.stop();
+        }
+        else
+        {
+            world.start();
+        }
+    
+    });
     
     for (var i = 0; i < 3; i++) {
         world.addParticle(new Bubble());
@@ -450,8 +445,8 @@ $(document).ready( function() {
     
     force1 = function(x,y,t) { // Forcefields are functions
    
-        //return [10 * Math.sin(y),10 * Math.sin(x)];
-        return [1, 0];
+        return [10 * Math.sin(y),10 * Math.sin(x)];
+        //return [-100, 0];
     }
     
     wall1 = new Wall("left wall", 1, 0, -1); // Wall at x = 100
@@ -462,6 +457,7 @@ $(document).ready( function() {
     wall2 = new Wall("right wall", container_width, 0, (-1 * container_width) );
     wall3 = new Wall("top wall", 0, container_height, (-1 * container_height) );
     wall4 = new Wall("bottom wall", 0, 1, -1);
+    
     
     //wall1 = new Wall("right wall", $(CONTAINER).width() - 100, 0, $(CONTAINER).width() - 100); // Wall at x = 100
         
