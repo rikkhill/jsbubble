@@ -69,7 +69,7 @@ function vNorm(v1) { // Get a unit vector from a vector
 }
 
 function vScale(n, v1) { // Scale a vector by n
-    return [ Math.round( n * v1[0] ) , Math.round( n * v1[1] )  ];
+    return [  n * v1[0]  ,  n * v1[1]   ];
 }
 
 function vSum(v1, v2) { // the sum of two vectors
@@ -205,15 +205,29 @@ function ForceEngine() {  // Applies forces to particles and manages collisions
             // Collisions
             
             for (j in self.obstacles) {
-                if (self.obstacles[j].distance([x, y]) <= r) {  // Collision with obstacle!
+            
+                if (self.parts[i].slack > 0)
+                {
+                    self.parts[i].slack--;
+                    continue;
+                }
+            
+                var distance = self.obstacles[j].distance([x, y]);
+                if (distance <= r) {  // Collision with obstacle!
+                
+                    var nearpoint = self.obstacles[j].nearpoint([x,y]);
                 
                     // reposition the particle at a point along its trajectory
                     // where it's not colliding
+                    //self.parts[i].slack = 4;
                     
                     var vel = self.parts[i].vel() // This is its velocity
+
+                    var diff = vDiff(self.parts[i].pos(), vScale(2,vel));  // This is what it was at two ticks ago
+                    self.parts[i].pos(diff); // forcibly reset it to the last tick
                     
                   
-                    self.parts[i].reflect(self.obstacles[i].nearpoint([x,y]));
+                    self.parts[i].reflect(self.obstacles[j].nearpoint([x,y]));
                 }
             }
 
@@ -225,9 +239,11 @@ function ForceEngine() {  // Applies forces to particles and manages collisions
             if (self.parts[i].ghost!== false) {
 	        continue;
             }
+            var old = self.parts[i].pos();
             self.parts[i].pos( vSum( self.parts[i].pos(), self.parts[i].vel() ) );
-            console.log(self.parts[i].id, self.parts[i].vel(), self.parts[i].pos());
             self.parts[i].render();
+            
+            problogger(old, self.parts[i].vel(), self.parts[i].pos());
         }
         
 
@@ -295,8 +311,10 @@ function Bubble() {  // A large round colourful particle
     this.y = rloc[1];
     
     
-    this.v_i = -1;
+    this.v_i = -2;
     this.v_j = -1;
+    
+    this.slack = 0;
 
     
 
@@ -347,6 +365,7 @@ function Bubble() {  // A large round colourful particle
     }
     
     this.reflect = function(point) {  // Reflect off a surface
+    
         var nv = vDiff (self.pos(), point);
         
         nv = vNorm(nv); // normal vector
@@ -357,8 +376,8 @@ function Bubble() {  // A large round colourful particle
         var my_reflection = vDiff( this.vel() , vScale( (dot_prod * 2), nv  ) );
         
         
-        this.vel(my_reflection); 
-
+        console.log(this.vel(my_reflection)); 
+        
     
     }
     
