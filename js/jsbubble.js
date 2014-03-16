@@ -102,7 +102,137 @@ function randCol() { // Completely random colour
 }
 
 
-// Particle Stuff
+
+function QuadTree(level, dims) {  // Quad-tree for collision detection
+
+    this.max_objects = 10;
+    this.max_levels = 4;
+    this.level = level;
+    // dims
+    this.x = dims[0];
+    this.y = dims[1];
+    this.width = dims[2];
+    this.height = dims[3];
+    
+    this.objects = [];
+    this.children = [];
+
+    
+    this.clear = function() {
+        var i;
+        while (i = this.children.shift()) {
+            i.clear();
+        }
+    }
+    
+    this.split = function() {
+    
+        var subwidth = Math.ceil(this.width / 2);
+        var subheight = Math.ceil(this.height / 2);
+        var x = this.x;
+        var y = this.y;
+        
+        this.children.push(new QuadTree(this.level+1, [ x + subwidth, y, subwidth, subheight ]));
+        this.children.push(new QuadTree(this.level+1, [ x, y, subwidth, subheight ]));
+        this.children.push(new QuadTree(this.level+1, [ x, y + subheight, subwidth, subheight ]));
+        this.children.push(new QuadTree(this.level+1, [ x + subwidth, y + subheight, subwidth, subheight]));
+    }
+    
+    this.getIndex = function(obj) {
+    
+        var x = obj.x;
+        var y = obj.y;
+        var rad = obj.radius;
+        
+        var upper, lower, right, left;
+        
+        var hmid = this.x + (this.width / 2);
+        var vmid = this.y + (this.height / 2);
+        
+        if (y+rad > vmid && y - rad > vmid) {  // Upper 
+            upper = true;
+        }
+        
+        if (y+rad < vmid && y - rad < vmid) { //lower
+            lower = true;
+        }
+        
+        if (x+rad > hmid && x - rad > hmid) { //lower
+	    right = true;
+        }
+        
+        if (x+rad < vmid && x - rad < vmid) { //lower
+	    left = true;
+        }
+        
+        if(upper && right) {
+            return 0;
+        }
+        else if(upper && left) {
+            return 1;
+        }
+        else if(lower && left) {
+            return 2;
+        }
+        else if(lower && right) {
+            return 3;
+        }
+        else {
+            return -1;
+        }
+    }
+    
+    this.insert = function(obj) {
+    
+        var index;
+        var holder = [];
+        var i;
+        if(this.children.length > 0) {
+            index = this.getIndex(obj);
+            if (index != -1) {
+                this.children[index].insert(obj);
+                return true;
+            }
+        }
+        
+        this.objects.push(obj);
+       
+        if (this.objects.length > this.max_objects && level < this.max_levels) {
+            if(this.children.length == 0) {
+                this.split();
+            }
+            
+            while(i = this.objects.shift()) {
+                index = this.getIndex(i);
+                if (index != -1) {
+                    this.children[index].insert(i);
+                }
+                else {
+                   holder.push(i);
+                }
+            }
+            this.objects = holder;
+        }
+
+    }
+    
+    this.retrieve = function(obj) {
+        var index = this.getIndex(obj);
+        var ret = []
+        
+        if (index != -1 && this.children.length > 0) {
+            ret.push.apply(ret, this.children[index].retrieve(obj) ); // append to array
+        }
+        
+        ret.push.apply(ret, this.objects);
+        
+        return ret;
+    }
+    
+    
+    
+
+}
 
 
 function World() {
@@ -114,6 +244,8 @@ function World() {
     this.parts = [];  // array of particles  
     this.forces = []; // array of forces
     this.obs = [];    // array of obstacles
+
+    this.tree = new QuadTree(0, [ 0, 0, DIMS.w, DIMS.h]);
 
     this.timer; 
     this.tick_size = 41;  // Number of ms in a "tick"
@@ -138,8 +270,11 @@ function World() {
 
     this.tick = function() {  // Execute a unit of time
     
-        var i, j, d, v;
-        
+        var i, j, d, v, treeparts;
+        self.tree.clear();
+        for (i in self.parts) {  // Insert all objects into the tree
+            self.tree.insert(self.parts[i]);
+        }
         
         for (i in self.parts) {    // collision handling
             for (j in self.obs) {  // check for walls
@@ -149,9 +284,11 @@ function World() {
             
             }
             
-            for (j in self.parts) {  // check for other particles
-                if(self.parts[i].distanceFrom(self.parts[j]) <= self.parts[i].radius + self.parts[j].radius) {  // Simple particle collision detection
-                    self.parts[i].collide(self.parts[j]);
+            treeparts = self.tree.retrieve(self.parts[i]); // get all potential collision objects
+            
+            for (j in treeparts) {  // check for other particles
+                if(self.parts[i].distanceFrom(treeparts[j]) <= self.parts[i].radius + treeparts[j].radius) {
+                    self.parts[i].collide(treeparts[j]);
                 }
             }
         }
@@ -355,8 +492,8 @@ $(document).ready( function() {
     
     //bubs = new Particle(randLocation(CONTAINER), 0.5, 0.5, 30);
     world = new World();    
-    for (var i = 0 ; i < 30 ; i++) {
-        world.addParticle( new Particle(randLocation(CONTAINER), Math.random() * randInt(1,5), Math.random() * randInt(1,5), randInt(30,50)) );
+    for (var i = 0 ; i < 11 ; i++) {
+        world.addParticle( new Particle(randLocation(CONTAINER), Math.random() * randInt(1,11), Math.random() * randInt(1,11), randInt(50,70)) );
     
     }
     
