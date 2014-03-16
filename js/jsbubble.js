@@ -270,9 +270,13 @@ function World() {
 
     this.tick = function() {  // Execute a unit of time
     
+    
         var i, j, d, v, treeparts;
         self.tree.clear();
         for (i in self.parts) {  // Insert all objects into the tree
+            if(self.parts[i].solid == false) {
+                continue;
+            }
             self.tree.insert(self.parts[i]);
         }
         
@@ -293,9 +297,13 @@ function World() {
             }
         }
         
-        
-        
+
         for(i in self.parts) {  // Move all particles
+        
+            if(self.parts[i].solid == false) {
+	       continue;
+            }
+            
             v = self.parts[i].pos();
         
             d = $V(self.parts[i].pos()).add( $V(self.parts[i].vel()) );
@@ -303,14 +311,30 @@ function World() {
             self.parts[i].render();
         
         }
-    
-    
-    
-
         self.absolute_time += self.tick_size;
+    }
+    
+    this.tidy = function() { // tidy things up a bit
+    
+        // Get rid of any bubbles outside the boundary    
+        var anchor = $V([DIMS.w / 2, DIMS.h / 2 ]);  // Rough centre of the page
+        var i, j, ref, o, pos_p, compare;
+        for (i in this.parts) {
+            pos_p = $V(this.parts[i].pos());
+            for (j in this.obs) {
+                o = this.obs[j];
+                ref = anchor.subtract(o.line.closestPointTo(anchor));
+                compare = pos_p.subtract(o.line.closestPointTo(pos_p));
+                if (ref.e(1) / compare.e(1) < 0 || ref.e(2) / compare.e(2) < 0) {
+                    this.parts.splice(i, 1);
+                }
+            }
+        }
+
     }
 
     this.start = function() {
+
         this.timer = setInterval(this.tick, this.tick_size);// interval);
         logger("timer started");
         this.running = true;
@@ -361,12 +385,16 @@ function Wall(nick, anchor, vector) {
 
 function Particle(d, v_i, v_j, radius) {
 
+    var self = this;
+
     this.x = d[0];
     this.y = d[1];
     this.v_i = v_i;
     this.v_j = v_j;
     this.radius = radius;
     this.trans = 0.6;
+    
+    this.solid = false;
     
     this.colour =   blendCol(randCol(),"#FFFFFF");
     
@@ -380,6 +408,7 @@ function Particle(d, v_i, v_j, radius) {
         "background-color" 	: this.colour,
         "border-radius"		: (this.radius + 1),
         "width"			: (this.radius + 1) * 2,
+        "opacity"		: 0,
         "height"		: (this.radius + 1) * 2,
         "top"			: this.y - this.radius,
         "left"			: this.x - this.radius,
@@ -390,6 +419,7 @@ function Particle(d, v_i, v_j, radius) {
     this.place = function() {  // put the element on the container
     
         $(CONTAINER).append(this.element);
+        $(this.element).fadeTo(randInt(600, 1000), this.trans, function(){ self.substantiate() });
     }
     
     this.render = function() {
@@ -402,6 +432,10 @@ function Particle(d, v_i, v_j, radius) {
         "opacity"		: this.trans
         
         });
+    }
+    
+    this.substantiate = function() {
+        this.solid = true;
     }
     
     this.pos = function(position) { // Get/set position
@@ -487,8 +521,6 @@ $(document).ready( function() {
     DIMS.y = $(CONTAINER).offset().y;
     DIMS.w = $(CONTAINER).width();
     DIMS.h = $(CONTAINER).height();
-    
-    console.log(DIMS);
     
     //bubs = new Particle(randLocation(CONTAINER), 0.5, 0.5, 30);
     world = new World();    
