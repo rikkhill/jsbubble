@@ -90,15 +90,12 @@ function weightCol(a, b, wa, wb) { // take two colours and return the weighted m
 }
 
 function randCol() { // Completely random colour
-    var component, returner = "#";
-    for (var i in [1,2,3]) {
-       component = randInt(0,255).toString(16);
-       if (component.length < 2) {
-           component = "0" + component;
-       }
-       returner += component;
-    }
-    return returner;
+
+
+    var colour = [ "#", randInt(0,255).toString(16),randInt(0,255).toString(16),randInt(0,255).toString(16)];
+    var colour = colour.join("");
+    return colour;
+
 }
 
 
@@ -291,9 +288,15 @@ function World() {
             treeparts = self.tree.retrieve(self.parts[i]); // get all potential collision objects
             
             for (j in treeparts) {  // check for other particles
-                if(self.parts[i].distanceFrom(treeparts[j]) <= self.parts[i].radius + treeparts[j].radius) {
+                if(self.parts[i].distanceFrom(treeparts[j]) < self.parts[i].radius + treeparts[j].radius && self.parts[i].uid != treeparts[j].uid) {
                     self.parts[i].collide(treeparts[j]);
                 }
+            }
+        }
+        
+        for(i in self.parts) {  // exert forces
+            for(j in self.forces) {
+               self.parts[i].exert(self.forces[j](self.parts[i].x, self.parts[i].y, self.absolute_time));
             }
         }
         
@@ -382,10 +385,11 @@ function Wall(nick, anchor, vector) {
 
 }
 
-
 function Particle(d, v_i, v_j, radius) {
 
     var self = this;
+    
+    this.uid = randInt(1000,9999);
 
     this.x = d[0];
     this.y = d[1];
@@ -438,6 +442,11 @@ function Particle(d, v_i, v_j, radius) {
         this.solid = true;
     }
     
+    
+    this.exert = function(vector){  // Exert a force vector on this particle
+        this.v_i += vector[0] / this.mass;
+        this.v_j += vector[1] / this.mass;
+    }
     this.pos = function(position) { // Get/set position
         if (typeof position !== "undefined") {
 	    this.x = position[0];
@@ -460,6 +469,8 @@ function Particle(d, v_i, v_j, radius) {
     }
     
     this.collide = function(particle) {  // Adjust two colliding particles
+  
+  
          var this_d = $V([this.x, this.y]);
          var that_d = $V([ particle.x, particle.y ]);
          
@@ -495,17 +506,20 @@ function Particle(d, v_i, v_j, radius) {
          
          particle.vel([that_scaled_diff.e(1), that_scaled_diff.e(2)]);
          
-         // Funky colour things
+         var col = blendCol(randCol(), '#FFFFFF');
+         this.colour = col;
+         particle.colour = col;
          
-         //var col = weightCol(this.colour, particle.colour, this.mass, particle.mass);
-         //this.colour = blendCol(randCol(),"#FFFFFF");
-         //particle.colour = blendCol(randCol(),"#000000");
-         
+         this_ke = 0.5 * this.mass * Math.pow(this_v.modulus(),2);
+         that_ke = 0.5 * particle.mass * Math.pow(that_v.modulus(),2);
     }
 }
 
 
+function createParticle(x, y, radius, colour, energy) {
 
+    var particle = new Particle();
+}
 
 // Globals
 
@@ -524,8 +538,8 @@ $(document).ready( function() {
     
     //bubs = new Particle(randLocation(CONTAINER), 0.5, 0.5, 30);
     world = new World();    
-    for (var i = 0 ; i < 11 ; i++) {
-        world.addParticle( new Particle(randLocation(CONTAINER), Math.random() * randInt(1,11), Math.random() * randInt(1,11), randInt(50,70)) );
+    for (var i = 0 ; i < 20 ; i++) {
+        world.addParticle( new Particle(randLocation(CONTAINER), Math.random() * randInt(0,0), Math.random() * randInt(0,0), randInt(25,50)) );
     
     }
     
@@ -536,7 +550,13 @@ $(document).ready( function() {
     wall4 = new Wall("bottomy", [0,DIMS.h], [1,0]);
     wall5 = new Wall("thingy", [0,0], [1,1]);
     
-
+    force1 = function(x,y,t) { // Forcefields are functions
+   
+    return [3 * Math.sin(y),3 * Math.sin(x)];
+        //return [-10, 0];
+        
+        //return [ (-y - (DIMS.h/2)) /1000, (-x - (DIMS.w/2))/1000 ];
+    }
     
     //world.addParticle(bubs);
     world.addObstacle(wall1);
@@ -544,6 +564,8 @@ $(document).ready( function() {
     world.addObstacle(wall3);
     world.addObstacle(wall4);
     //world.addObstacle(wall5);
+    
+    world.addForce(force1);
     
     
     world.start();
