@@ -244,14 +244,13 @@ function World() {
 
     this.tree = new QuadTree(0, [ 0, 0, DIMS.w, DIMS.h]);
 
-    this.timer; 
+    this.timer;
+    this.bigtimer;
     this.tick_size = 41;  // Number of ms in a "tick"
 
     this.absolute_time = 0;  // absolute time
 
     this.addParticle = function(particle) {  // Add a particle
-   
-        particle.place();
         this.parts.push(particle);
     }
 
@@ -320,15 +319,25 @@ function World() {
     this.tidy = function() { // tidy things up a bit
     
         // Get rid of any bubbles outside the boundary    
-        var anchor = $V([DIMS.w / 2, DIMS.h / 2 ]);  // Rough centre of the page
+        var anchor = $V([DIMS.w / 2, DIMS.h / 2 ]).to3D();  // Rough centre of the page
         var i, j, ref, o, pos_p, compare;
         for (i in this.parts) {
-            pos_p = $V(this.parts[i].pos());
+        
+            if($(this.element).attr("burst")) {
+                this.parts[i].dead = true;
+            }
+        
+            if(this.parts[i].dead) {
+                this.parts.splice(i,1);
+                continue;
+            }
+        
+            pos_p = $V(this.parts[i].pos()).to3D();
             for (j in this.obs) {
-                o = this.obs[j];
-                ref = anchor.subtract(o.line.closestPointTo(anchor));
-                compare = pos_p.subtract(o.line.closestPointTo(pos_p));
+                ref = anchor.subtract(this.obs[j].line.pointClosestTo(anchor));
+                compare = pos_p.subtract(this.obs[j].line.pointClosestTo(pos_p));
                 if (ref.e(1) / compare.e(1) < 0 || ref.e(2) / compare.e(2) < 0) {
+                    $(this.parts[i].element).remove();
                     this.parts.splice(i, 1);
                 }
             }
@@ -339,8 +348,17 @@ function World() {
     this.start = function() {
 
         this.timer = setInterval(this.tick, this.tick_size);// interval);
-        logger("timer started");
+        this.tidy();
+        this.timer = setInterval(function() {
+            self.tidy();
+        }, 2000);  // Stuff that doesn't have to happen all the time
+        
         this.running = true;
+        
+        for (i in this.parts){
+            this.parts[i].place();
+        }
+        
         return true;
     }
     
@@ -397,6 +415,7 @@ function Particle(d, v_i, v_j, radius) {
     this.v_j = v_j;
     this.radius = radius;
     this.trans = 0.6;
+    this.dead = false;
     
     this.solid = false;
     
@@ -513,12 +532,25 @@ function Particle(d, v_i, v_j, radius) {
          this_ke = 0.5 * this.mass * Math.pow(this_v.modulus(),2);
          that_ke = 0.5 * particle.mass * Math.pow(that_v.modulus(),2);
     }
+    
+    this.burst = function() {
+    
+    }
 }
+
+
 
 
 function createParticle(x, y, radius, colour, energy) {
 
-    var particle = new Particle();
+    var part = new Particle([x,y], 0, 0, radius);
+    part.x = x;
+    part.y = y;
+    part.radius = radius;
+    part.colour = colour;
+    part.v_i = energy * (Math.random() - 0.5);
+    part.v_i = energy * (Math.random() - 0.5);
+    return part;
 }
 
 // Globals
@@ -538,8 +570,8 @@ $(document).ready( function() {
     
     //bubs = new Particle(randLocation(CONTAINER), 0.5, 0.5, 30);
     world = new World();    
-    for (var i = 0 ; i < 20 ; i++) {
-        world.addParticle( new Particle(randLocation(CONTAINER), Math.random() * randInt(0,0), Math.random() * randInt(0,0), randInt(25,50)) );
+    for (var i = 0 ; i < 10 ; i++) {
+        world.addParticle( new Particle(randLocation(CONTAINER), Math.random() * randInt(0,0), Math.random() * randInt(0,0), randInt(30,60)) );
     
     }
     
@@ -552,7 +584,7 @@ $(document).ready( function() {
     
     force1 = function(x,y,t) { // Forcefields are functions
    
-    return [3 * Math.sin(y),3 * Math.sin(x)];
+    return [Math.sin(y),Math.sin(x)];
         //return [-10, 0];
         
         //return [ (-y - (DIMS.h/2)) /1000, (-x - (DIMS.w/2))/1000 ];
@@ -569,6 +601,27 @@ $(document).ready( function() {
     
     
     world.start();
+    
+    $(CONTAINER).on('click', function(e) { //burst!
+    
+        var x = e.offsetX;
+        var y = e.offsetY;
+        var i;
+        var arr = [];
+        for( i = 0 ; i < 1; i++) {
+            arr.push(createParticle(x, y, randInt(25, 40), randCol(), 2));
+        }
+        
+        for(i in arr) {
+            world.addParticle(arr[i]);
+            arr[i].place();
+        }
+    });
+    
+    $(".bubble").on('click', function(e) { //burst!
+        
+        $(this).attr("burst", "true");
+    });
     
 
 
