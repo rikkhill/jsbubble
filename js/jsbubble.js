@@ -616,7 +616,7 @@ $(document).ready( function() {
     
     //bubs = new Particle(randLocation(CONTAINER), 0.5, 0.5, 30);
     world = new World();    
-    for (var i = 0 ; i < 25 ; i++) {
+    for (var i = 0 ; i < 30 ; i++) {
         var loc = randLocation(CONTAINER, true);
         var rad = randInt(40,60);
         if (world.checkspace( loc, rad )) {
@@ -631,7 +631,11 @@ $(document).ready( function() {
     wall4 = new Wall("bottom", [0,DIMS.h], [1,0], 0.9, 0.9);
 
     force1 = function(x,y,t) { // Forcefields are functions
-        return [ Math.round ( 2 * Math.sin(y - (DIMS.h/2)) ), Math.round( 2 * Math.sin(x - (DIMS.w/2)) )];
+        return [ Math.round ( 1 * Math.sin(y - (DIMS.h/2)) ), Math.round( 1 * Math.sin(x - (DIMS.w/2)) )];
+    }
+
+    force2 = function(x,y,t) {
+        return [ Math.sin(t / 1000) / 3, Math.cos(t / 1000) / 3 ] ; 
     }
     
     world.addObstacle(wall1);
@@ -640,6 +644,7 @@ $(document).ready( function() {
     world.addObstacle(wall4);
     
     world.addForce(force1);
+    world.addForce(force2);
 
     world.start();
 /*    
