@@ -251,7 +251,7 @@ function World() {
 
     this.timer;
     this.bigtimer;
-    this.tick_size = 42;  // Number of ms in a "tick"
+    this.tick_size = 33;  // Number of ms in a "tick"
 
     this.absolute_time = 0;  // absolute time
 
