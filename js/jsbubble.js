@@ -631,7 +631,7 @@ $(document).ready( function() {
     wall4 = new Wall("bottom", [0,DIMS.h], [1,0], 0.9, 0.9);
 
     force1 = function(x,y,t) { // Forcefields are functions
-        return [ 2 * Math.sin(y - (DIMS.h/2)), 2 * Math.sin(x - (DIMS.w/2))];
+        return [ Math.round ( 2 * Math.sin(y - (DIMS.h/2)) ), Math.round( 2 * Math.sin(x - (DIMS.w/2)) )];
     }
     
     world.addObstacle(wall1);
