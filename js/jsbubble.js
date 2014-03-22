@@ -260,9 +260,7 @@ function World() {
     }
 
     this.addForce = function(force) {  // Add a particle
-    
         this.forces.push(force);
-
     }
 
     this.addObstacle = function(obstacle) { // Add a constraint / wall
@@ -270,8 +268,6 @@ function World() {
     }
 
     this.tick = function() {  // Execute a unit of time
-    
-    
         var i, j, d, v, treeparts;
         self.tree.clear();
         for (i in self.parts) {  // Insert all objects into the tree
@@ -338,25 +334,6 @@ function World() {
         return true;
     }
 
-    this.bigtick = function() {  // Add bubbles at random intervals
-    
-        var pos = randLocation(CONTAINER);
-        var rad = randInt(50,80);
-        var party;
-    
-        if(randInt(0,8) == 1 && self.checkspace(pos) ) {
-            //party = new Particle(pos, 0, 0, rad);
-            //self.addParticle( party );
-            //party.place();
-            //logger("added new particle");
-        }
-        
-        if(randInt(0,8) == 1){
-            //self.parts[ randInt(0, self.parts.length - 1) ].burst();
-        }
-        
-    }
-    
     this.tidy = function() { // tidy things up a bit
     
         // Get rid of any bubbles outside the boundary    
@@ -390,11 +367,6 @@ function World() {
 
         this.timer = setInterval(this.tick, this.tick_size);// interval);
         this.tidy();
-        this.timer = setInterval(function() {
-            self.tidy();
-            self.bigtick();
-        }, 2000);  // Stuff that doesn't have to happen all the time
-        
         this.running = true;
         
         for (i in this.parts){
@@ -426,12 +398,6 @@ function Wall(nick, anchor, vector) {
     }
     
     this.impact = function(particle) {  // Adjust a colliding particle's properties appropriately
-    
-        //if(particle.mass * Math.pow($V(particle.vel()).modulus(),2) > 170) {
-        //    particle.burst();
-        //}
-        
-    
         var pos = $V(particle.pos()).to3D();
         var vel = $V(particle.vel()).to3D();
         var impact_point = this.line.pointClosestTo(pos);
@@ -447,7 +413,6 @@ function Wall(nick, anchor, vector) {
         var refl = vel.subtract(  norm.x(proj * 2) );
         particle.vel( [ refl.e(1), refl.e(2) ] );
     }
-
 }
 
 function Particle(d, v_i, v_j, radius) {
@@ -463,7 +428,6 @@ function Particle(d, v_i, v_j, radius) {
     this.radius = radius;
     this.trans = 0.2;
     this.dead = false;
-    
     this.solid = false;
     
     this.colour =   blendCol(randCol(),"#FFFFFF");
@@ -473,32 +437,76 @@ function Particle(d, v_i, v_j, radius) {
     this.friction = 0;
     this.elast = 0;
     
-    this.element = $("<div>").css({
+    this.element = $("<div>").addClass('particle bubble').css({
         "position"		: "absolute",
         "background-color" 	: this.colour,
-        "border-radius"		: (this.radius),
         "width"			: (this.radius) * 2,
         "opacity"		: 0,
         "height"		: (this.radius) * 2,
         "top"			: this.y - this.radius,
-        "left"			: this.x - this.radius,
-        "box-shadow"		: "0px 0px 20px inset"  // I am going to hell for using this CSS property
+        "left"			: this.x - this.radius
     
     });
     
+    $("<div>").addClass('vector_i').appendTo(this.element);
+    $("<div>").addClass('vector_j').appendTo(this.element);
+    $("<div>").addClass('info').appendTo(this.element);
+    
     this.place = function() {  // put the element on the container
         $(CONTAINER).append(this.element);
-        $(this.element).fadeTo(randInt(600, 1000), this.trans, function(){ self.substantiate() });
+        $(this.element).fadeTo(randInt(600, 1000), 0.2, function(){ 
+            self.substantiate();
+            $(self.element).css('opacity', '');
+            
+        });
     }
     
     this.render = function() {
+    
+        var col = "";
+        if ($(this.element).hasClass('bubble')) {
+            col = this.colour; 
+        }
+    
         $(this.element).css({
-        "width"			: (this.radius) * 2,
-        "height"		: (this.radius) * 2,
-        "background-color" 	: this.colour,
-        "top"			: this.y - (this.radius + 1),
-        "left"			: this.x - (this.radius + 1)        
+        "background-color" 	: col,
+        "top"			: this.y - (this.radius),
+        "left"			: this.x - (this.radius)        
         });
+        
+        if($(this.element).hasClass('tech')) {
+            var vec = $V(this.vel());
+            var norm = vec.toUnitVector();
+        
+            var scaleX = "scaleX(" + (vec.e(1)) + ")";
+            var scaleY = "scaleY(" + (vec.e(2)) + ")";
+        
+            $(this.element).children(".vector_i").css({
+                'transform': scaleX,
+                '-ms-transform': scaleX,
+                '-webkit-transform': scaleX
+            });
+        
+            $(this.element).children(".vector_j").css({
+                'transform': scaleY,
+                '-ms-transform': scaleY,
+                '-webkit-transform': scaleY
+            });
+            
+            var info = "id: " + this.uid;
+            info += "<br />x: " + Math.floor(this.x * 42);
+            info += "<br />y: " + Math.floor(this.y * 42);
+            info += "<br />v_i: " + Math.floor(this.v_i * 42);
+            info += "<br />v_j: " + Math.floor(this.v_j * 42);
+            info += "<br />mass:" + this.mass.toFixed(4);
+            var speed = Math.sqrt( Math.pow(this.v_j * 42, 2) + Math.pow(this.v_j * 42, 2) );
+            
+            info += "<br />speed: " + Math.floor(speed);
+            info += "<br />KE: " + Math.floor(this.mass * 0.5 * speed * speed);
+            info += "<br />colour: " + this.colour;
+            
+            $(this.element).children('.info').html(info);
+        }
     }
     
     this.substantiate = function() {
@@ -532,60 +540,23 @@ function Particle(d, v_i, v_j, radius) {
     }
     
     this.collide = function(particle) {  // Adjust two colliding particles
-  
-  
          var this_d = $V([this.x, this.y]);
          var that_d = $V([ particle.x, particle.y ]);
          
          var this_v = $V([this.v_i, this.v_j]);
          var that_v = $V([ particle.v_i, particle.v_j]);
-         
-         var this_ke = 0.5 * this.mass * Math.pow(this_v.modulus(),2);
-         var that_ke = 0.5 * particle.mass * Math.pow(that_v.modulus(),2);
-         
-         //if (this_ke + that_ke > 180) {
-             //this.burst();
-             //particle.burst();
-             //return 1;
-         //}
-
-         
-         
          var norm = this_d.subtract(that_d).toUnitVector();
          
          // Push each other apart so they're no longer penetrating
-         var penetration = 1 + this.radius + particle.radius - this_d.distanceFrom(that_d);
-         var penrate = penetration / (this.radius + particle.radius);
-         //console.log(penrate);
+         var penetration = 3 + this.radius + particle.radius - this_d.distanceFrom(that_d);
+
          var bounce_share = (this.mass * this_v.modulus()) / ((this.mass * this_v.modulus()) + (particle.mass * that_v.modulus()));
          
-         if (penrate > 0.9) {
-         
-             if (this.radius > particle.radius) {
-                 this.merge(particle);
-             }
-             else {
-                 particle.merge(this);
-             }
+         var this_newpos = this_d.add(norm.x(penetration * bounce_share));
+         var that_newpos = that_d.subtract(norm.x(penetration * (1 - bounce_share)));
 
-             return false;
-         }
-         
-         if(penrate < 0.05) {
-             var this_newpos = this_d.add(norm.x(penetration * bounce_share));
-             var that_newpos = that_d.subtract(norm.x(penetration * (1 - bounce_share)));
-         }
-         else {  // If they collide fast and hard enough, merge them
-             var this_newpos = this_d.subtract(norm.x(( 1 - penrate) * penetration * bounce_share));
-             var that_newpos = that_d.add(norm.x( (1 - penrate) * penetration * (1 - bounce_share)));
-             console.log("merge?");
-         }
          this.pos([ this_newpos.e(1), this_newpos.e(2)  ]);
          particle.pos([ that_newpos.e(1), that_newpos.e(2)  ]);
-         
-         if (penrate > 0.1) {
-             return null;
-         }
          
          
          // reflect them properly
@@ -606,62 +577,16 @@ function Particle(d, v_i, v_j, radius) {
          
          particle.vel([that_scaled_diff.e(1), that_scaled_diff.e(2)]);
          
-         //var col = blendCol(randCol(), '#FFFFFF');
-         //this.colour = col;
-         //particle.colour = col;
+         
+         var col = blendCol(randCol(), '#FFFFFF');
+         this.colour = col;
+         particle.colour = col;
 
-    }
-    
-    
-    this.burst = function() {
-    
-        this.colour = '#FFFFFF';
-        $(this.element).css({'background-color' : '#FFFFFF', 'border' : '1pt solid black'}).animate({
-            'opacity': 0.3, 'radius': self.radius * 0.9
-        }, 100, function() {
-            $(self.element).remove();
-            self.dead = true;
-        
-        });
-    
-        
-    }
-    
-    this.merge = function(particle) {
-    
-        if (this.solid == false) {
-            return null;
-        }
-        //this.v1 += particle.v1/2;
-        //this.v2 += particle.v2/2;
-        this.colour = blendCol(this.colour, particle.colour);
-        this.mass += particle.mass;
-        this.radius += Math.pow(particle.radius, 0.2);
-        $(this.element).css({
-        	'width' : this.radius * 2,
-        	'height' : this.radius * 2,
-        	'border-radius' : this.radius
-        });
-        
-        particle.burst();
-        particle.solid = false;
-
-        console.log("MERGE: ", this.mass, this.radius);
     }
 }
 
 
-function createParticle(x, y, radius, colour, energy) {
 
-    var part = new Particle([x,y], 0, 0, radius);
-    part.x = x;
-    part.y = y;
-    part.radius = radius;
-    part.colour = colour;
-    part.v_i = energy * (Math.random() - 0.5);
-    part.v_i = energy * (Math.random() - 0.5);
-    return part;
-}
 
 // Globals
 
@@ -673,64 +598,52 @@ DIMS = {};
 $(document).ready( function() {
 
     CONTAINER = $("#bubblebox").get();
+    
+    
     DIMS.x = $(CONTAINER).offset().x;
     DIMS.y = $(CONTAINER).offset().y;
     DIMS.w = $(CONTAINER).width();
     DIMS.h = $(CONTAINER).height();
     
+    $(CONTAINER).css("overflow", "hidden");
+    
     //bubs = new Particle(randLocation(CONTAINER), 0.5, 0.5, 30);
     world = new World();    
-    for (var i = 0 ; i < 10 ; i++) {
-    
+    for (var i = 0 ; i < 35 ; i++) {
         var loc = randLocation(CONTAINER, true);
-        var rad = randInt(60,80);
+        var rad = randInt(30,50);
         if (world.checkspace( loc, rad )) {
-            world.addParticle( new Particle(loc, 0, 0, rad) );
+            world.addParticle( new Particle(loc, Math.random() * 0, Math.random() * 0, rad) );
         }
-    
     }
     
-    wall1 = new Wall("lefty", [0,0], [0,1]); // Wall on the y-axis
-    wall2 = new Wall("toppy", [0,0], [1,0]);
-    
-    wall3 = new Wall("righty", [DIMS.w,0], [0,1]);
-    wall4 = new Wall("bottomy", [0,DIMS.h], [1,0]);
-    wall5 = new Wall("thingy", [0,0], [1,1]);
-    
+    // Create the "pen
+    wall1 = new Wall("left", [0,0], [0,1]);
+    wall2 = new Wall("top", [0,0], [1,0]);
+    wall3 = new Wall("right", [DIMS.w,0], [0,1]);
+    wall4 = new Wall("bottom", [0,DIMS.h], [1,0]);
+
     force1 = function(x,y,t) { // Forcefields are functions
-   
-    return [Math.sin(y),Math.sin(x)];
-        //return [-10, 0];
-        
-        //return [ (-y - (DIMS.h/2)) /1000, (-x - (DIMS.w/2))/1000 ];
+        return [Math.sin(y - (DIMS.h/2)),Math.sin(x - (DIMS.w/2))];
     }
     
-    //world.addParticle(bubs);
     world.addObstacle(wall1);
     world.addObstacle(wall2);
     world.addObstacle(wall3);
     world.addObstacle(wall4);
-    //world.addObstacle(wall5);
     
     world.addForce(force1);
-    
-    
+
     world.start();
     
-    $(CONTAINER).on('click', function(e) { //burst!
-    
-        var x = e.offsetX;
-        var y = e.offsetY;
-        var i;
-        var arr = [];
-        for( i = 0 ; i < 1; i++) {
-            arr.push(createParticle(x, y, randInt(60, 80), blendCol(randCol(), '#FFFFFF'), 2));
+    $('#button').on('click', function() {
+        if ( $(this).hasClass('bubble') ) {
+            $(".bubble").removeClass('bubble').addClass('tech');
         }
-        
-        for(i in arr) {
-            world.addParticle(arr[i]);
-            arr[i].place();
+        else {
+            $(".tech").removeClass('tech').addClass('bubble');
         }
     });
+
   
 });

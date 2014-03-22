@@ -9,6 +9,7 @@
 
         <link rel="stylesheet" href="css/normalize.min.css">
         <link rel="stylesheet" href="css/main.css">
+        <link rel="stylesheet" href="css/bubble.css">
 
         <script type='text/javascript' src="js/vendor/jquery-1.10.1.min.js"></script>
         <script type='text/javascript' src="js/vendor/sylvester.js"></script>
@@ -20,7 +21,24 @@
     </head>
     <body>
 
-    <div id="bubblebox" style="position: absolute; top: 2%; left: 2%; border: 0pt solid black; width: 88%; height: 95%;">
+    <div id="bubblebox">
+
+    </div>
+
+    <div id="controlpanel">
+    <div id="blurb">A little particle-collision toy I put together using the
+    <a href='http://sylvester.jcoglan.com/'>Sylvester</a> library. The bubbles are acted upon by a
+    vector field (a translation of [sin(y), sin(x)], if you're interested), and exhibit quasi-realistic
+    dynamics on impact.
+
+    <br /><br />
+    Collision detection is handled via quadtree partitioning, which doesn't matter all
+    that much for purposes of this demonstration, but could in principle handle a much larger
+    number of particles in a performant manner.
+
+    </div>
+
+    <div id='button' class='bubble'>PRESS ME</div>
 
     </div>
 
