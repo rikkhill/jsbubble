@@ -386,12 +386,12 @@ function World() {
 }
 
 
-function Wall(nick, anchor, vector) {
+function Wall(nick, anchor, vector, frict, elast) {
 
     this.nick = nick;
     this.line = $L(anchor, vector);
-    this.friction = 0;
-    this.elast = 0;
+    this.friction = frict;
+    this.elasticity = elast;
     
     this.distanceFrom = function(particle) { // return distance from particle
         return this.line.distanceFrom($V([particle.x, particle.y]));
@@ -409,8 +409,14 @@ function Wall(nick, anchor, vector) {
         particle.pos([ newpos.e(1), newpos.e(2)  ]);
         
         // Adjust particle's velocity
+        var total_frict = this.friction * particle.friction;
+        var total_elasticity = this.elasticity * particle.elasticity;
+        
+        var perp = $V([norm.e(2), norm.e(1), norm.e(3) ]); // Perpendicular unit vector
         var proj = vel.dot(norm);
-        var refl = vel.subtract(  norm.x(proj * 2) );
+        var refl = vel.subtract(  norm.x(proj * 2 * total_elasticity) );
+        refl = refl.subtract(perp.x(-total_frict));
+        
         particle.vel( [ refl.e(1), refl.e(2) ] );
     }
 }
@@ -430,12 +436,12 @@ function Particle(d, v_i, v_j, radius) {
     this.dead = false;
     this.solid = false;
     
-    this.colour =   blendCol(randCol(),"#FFFFFF");
+    this.colour =   blendCol(randCol(), '#FFFFFF');
     
     this.mass = Math.pow(radius, 0.5);
     
-    this.friction = 0;
-    this.elast = 0;
+    this.friction = 0.9;
+    this.elasticity = 0.9;
     
     this.element = $("<div>").addClass('particle bubble').css({
         "position"		: "absolute",
@@ -478,9 +484,9 @@ function Particle(d, v_i, v_j, radius) {
             var vec = $V(this.vel());
             var norm = vec.toUnitVector();
         
-            var scaleX = "scaleX(" + (vec.e(1)) + ")";
-            var scaleY = "scaleY(" + (vec.e(2)) + ")";
-        
+            var scaleX = "scaleX(" + (norm.e(1)).toFixed(1) + ")";
+            var scaleY = "scaleY(" + (norm.e(2)).toFixed(1) + ")";
+   
             $(this.element).children(".vector_i").css({
                 'transform': scaleX,
                 '-ms-transform': scaleX,
@@ -543,6 +549,8 @@ function Particle(d, v_i, v_j, radius) {
          var this_d = $V([this.x, this.y]);
          var that_d = $V([ particle.x, particle.y ]);
          
+         var total_elasticity = this.elasticity * particle.elasticity;
+         
          var this_v = $V([this.v_i, this.v_j]);
          var that_v = $V([ particle.v_i, particle.v_j]);
          var norm = this_d.subtract(that_d).toUnitVector();
@@ -564,7 +572,7 @@ function Particle(d, v_i, v_j, radius) {
          var this_proj = this_v.dot(norm);
          var that_proj = that_v.dot(norm);
          
-         var impulse = ( 2.0 * (this_proj - that_proj) ) / (this.mass + particle.mass);
+         var impulse = ( total_elasticity * 2.0 * (this_proj - that_proj) ) / (this.mass + particle.mass);
          if (impulse > 0) {
              impulse = 0;
          }
@@ -594,7 +602,6 @@ DEBUG = true;
 CONTAINER = {};
 DIMS = {};
 
-
 $(document).ready( function() {
 
     CONTAINER = $("#bubblebox").get();
@@ -605,26 +612,26 @@ $(document).ready( function() {
     DIMS.w = $(CONTAINER).width();
     DIMS.h = $(CONTAINER).height();
     
-    $(CONTAINER).css("overflow", "hidden");
+    $(CONTAINER).css({ "overflow":  "hidden"});
     
     //bubs = new Particle(randLocation(CONTAINER), 0.5, 0.5, 30);
     world = new World();    
-    for (var i = 0 ; i < 35 ; i++) {
+    for (var i = 0 ; i < 25 ; i++) {
         var loc = randLocation(CONTAINER, true);
-        var rad = randInt(30,50);
+        var rad = randInt(40,60);
         if (world.checkspace( loc, rad )) {
             world.addParticle( new Particle(loc, Math.random() * 0, Math.random() * 0, rad) );
         }
     }
     
     // Create the "pen
-    wall1 = new Wall("left", [0,0], [0,1]);
-    wall2 = new Wall("top", [0,0], [1,0]);
-    wall3 = new Wall("right", [DIMS.w,0], [0,1]);
-    wall4 = new Wall("bottom", [0,DIMS.h], [1,0]);
+    wall1 = new Wall("left", [0,0], [0,1], 0.9, 0.9);
+    wall2 = new Wall("top", [0,0], [1,0], 0.9, 0.9);
+    wall3 = new Wall("right", [DIMS.w,0], [0,1], 0.9, 0.9);
+    wall4 = new Wall("bottom", [0,DIMS.h], [1,0], 0.9, 0.9);
 
     force1 = function(x,y,t) { // Forcefields are functions
-        return [Math.sin(y - (DIMS.h/2)),Math.sin(x - (DIMS.w/2))];
+        return [ 2 * Math.sin(y - (DIMS.h/2)), 2 * Math.sin(x - (DIMS.w/2))];
     }
     
     world.addObstacle(wall1);
@@ -635,6 +642,31 @@ $(document).ready( function() {
     world.addForce(force1);
 
     world.start();
+/*    
+    // preload vector images
+    
+    var vi = $("<img/>").attr('src','./img/vector_i.png' )
+    var vj = $("<img/>").attr('src','./img/vector_j.png' )
+    
+    var scaleX, scaleY;
+    
+    for(i = -10 ; i <= 10; i++) {
+        var scaleX = "scaleX(" + i/10 + ")";
+        var scaleY = "scaleY(" + i/10 + ")";
+        vi.css({
+                'transform': scaleX,
+                '-ms-transform': scaleX,
+                '-webkit-transform': scaleX
+            });;
+        vj.css({
+                'transform': scaleY,
+                '-ms-transform': scaleY,
+                '-webkit-transform': scaleY
+            });;
+
+    }
+    
+    */
     
     $('#button').on('click', function() {
         if ( $(this).hasClass('bubble') ) {

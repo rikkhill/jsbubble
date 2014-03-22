@@ -73,8 +73,8 @@
 
 .bubble {
 
-    box-shadow:   0px 0px 20px inset;
-    opacity:      0.2;
+    box-shadow:   0px 0px 20px #000000 inset;
+    opacity:      0.5;
 
 }
 

@@ -29,12 +29,13 @@
     <div id="blurb">A little particle-collision toy I put together using the
     <a href='http://sylvester.jcoglan.com/'>Sylvester</a> library. The bubbles are acted upon by a
     vector field (a translation of [sin(y), sin(x)], if you're interested), and exhibit quasi-realistic
-    dynamics on impact.
+    dynamics on impact, including friction and elasticity.
 
     <br /><br />
     Collision detection is handled via quadtree partitioning, which doesn't matter all
-    that much for purposes of this demonstration, but could in principle handle a much larger
-    number of particles in a performant manner.
+    that much for purposes of this demonstration, (the bottleneck is elsewhere), but could
+    in principle handle a much larger number of particles without an exponential increase in
+    frame rendering operations.
 
     </div>
 
