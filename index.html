@@ -1,1 +1,48 @@
-blah blah
+<!DOCTYPE html>
+<html class="no-js">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>jsbubble</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width">
+
+        <link rel="stylesheet" href="css/normalize.min.css">
+        <link rel="stylesheet" href="css/main.css">
+        <link rel="stylesheet" href="css/bubble.css">
+
+        <script type='text/javascript' src="js/vendor/jquery-1.10.1.min.js"></script>
+        <script type='text/javascript' src="js/vendor/sylvester.js"></script>
+        <script src="js/jsbubble.js"></script>
+        <!--[if lt IE 9]>
+            <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+            <script>window.html5 || document.write('<script src="js/vendor/html5shiv.js"><\/script>')</script>
+        <![endif]-->
+    </head>
+    <body>
+
+    <div id="bubblebox">
+
+    </div>
+
+    <div id="controlpanel">
+    <div id="blurb">A little particle-collision toy I put together using the
+    <a href='http://sylvester.jcoglan.com/'>Sylvester</a> library. The bubbles are acted upon by a set of
+    vector fields (in this case, translations of [sin(y), sin(x)] and [sin(t), cos(t)]), and exhibit
+    quasi-realistic dynamics on impact, including friction and elasticity.
+
+    <br /><br />
+    Collision detection is handled via quadtree partitioning, which doesn't matter all
+    that much for purposes of this demonstration, (the bottleneck for rendering stuff in the browser
+    is elsewhere and happens earlier), but could in principle handle a much larger number of particles without an exponential increase in
+    frame rendering operations.
+
+    </div>
+
+    <div id='button' class='bubble'>PRESS ME</div>
+
+    </div>
+
+
+    </body>
+</html>

@@ -1,0 +1,123 @@
+/* bubble.css
+
+   Stylesheet for jsbubble
+
+*/
+
+#bubblebox {
+    position: absolute;
+    top: 2%;
+    left: 2%;
+    border: 0pt solid black;
+    width: 75%;
+    height: 95%;
+}
+
+#controlpanel {
+    position: absolute;
+    top: 2%;
+    left: 77%;
+    width: 22%;
+    height: 95%;
+}
+
+#button {
+    margin-left:auto;
+    margin-right:auto;
+    width:40%;
+    background-color: #aa99bb;
+    padding: 5px;
+    text-align: center;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+#button.tech {
+    background-color: #ffffff;
+    font-family: "Courier New", Courier, monospace;
+}
+
+#button.bubble:hover {
+    opacity: 0.7;
+}
+
+#button.tech:hover {
+    background-color: black;
+    color: white;
+}
+
+#button:click {
+    background-color: #bbaacc;
+}
+
+#controlpanel.bubble {
+    background-color: #eee9ee;
+    border-radius: 1%;
+    opacity: 1;
+}
+
+#controlpanel.tech {
+    background-color: #ffffff;
+    border: 1pt solid black;
+}
+
+#blurb {
+  font-family: "Lucida Console", Monaco, monospace;
+  font-size: small;
+  margin: 5%;
+}
+
+.particle {
+    border-radius: 100%;
+}
+
+.bubble {
+
+    box-shadow:   0px 0px 20px #000000 inset;
+    opacity:      0.5;
+
+}
+
+.tech {
+    border: 1pt solid red;
+    background-color: none;
+}
+
+.vector_i {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-image:url('../img/vector_i.png');
+    background-size: 100% 100%;
+    visibility: hidden;
+}
+
+.tech .vector_i {
+    visibility: visible;
+}
+
+.vector_j {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-image:url('../img/vector_j.png');
+    background-size: 100% 100%;
+    visibility: hidden;
+}
+
+.tech .vector_j {
+    visibility: visible;
+}
+
+.info {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    font-family: "Courier New", Courier, monospace;
+    font-size: x-small;
+    visibility: hidden;
+}
+
+.tech .info {
+    visibility: visible;
+}
